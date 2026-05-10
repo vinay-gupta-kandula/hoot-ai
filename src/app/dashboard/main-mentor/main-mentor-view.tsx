@@ -1,668 +1,615 @@
-// app/dashboard/main-mentor/page.tsx
-// Props-driven: pass MainMentorPageProps from a server component or layout
+'use client'
 
-"use client";
-
-import { useState, useTransition } from "react";
-import toast, { Toaster } from "react-hot-toast";
-import { assignMentor, removeMentor } from "./actions";
-import Link from "next/link";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import React, { useState, useMemo } from 'react'
+import Link from 'next/link'
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  PieChart, Pie, AreaChart, Area,
+} from 'recharts'
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import {
-    Users,
-    UserCheck,
-    BookOpen,
-    TrendingUp,
-    RefreshCw,
-    GraduationCap,
-    X,
-} from "lucide-react";
-import { SkillRadar } from "@/components/charts/radar-chart";
-import type { SkillRadarData } from "@/components/charts/radar-chart";
-import { AccuracyBarChart } from "@/components/charts/bar-chart";
-import type { AccuracyBarData } from "@/components/charts/bar-chart";
-import { DistributionPie } from "@/components/charts/pie-chart";
-import type { PieData } from "@/components/charts/pie-chart";
-import { HeatmapGrid } from "@/components/charts/heatmap";
+  Users, BookOpen, Target, TrendingUp, Clock, RotateCcw, Search,
+  LayoutDashboard, Activity, BarChart3, PieChart as PieIcon, Layers,
+  GraduationCap, Mail, ChevronRight, AlertTriangle, Award, Hash,
+  Building2, Cpu, UserCheck, ArrowRight, Bell,
+} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { createClient } from '@supabase/supabase-js'
 
-/* ─── Types ─────────────────────────────────────────── */
-export interface MentorSummary {
-    id: string;
-    name: string;
-    department: "CSE" | "ECE" | "Mech" | "Civil" | "IT";
-    email: string;
-    studentCount: number;
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+interface MentorStat {
+  id: string
+  name: string
+  poolNo: number | null
+  studentCount: number
+  avgAccuracy: number
+  totalDuration: number
+  totalAttempts: number
 }
 
-export interface StudentWithMentor {
-    id: string;
-    name: string;
-    rollNo: string;
-    branch: "CSE" | "ECE" | "Mech" | "Civil" | "IT";
-    mentorId: string | null;
-    mentorName: string | null;
+interface StudentStat {
+  id: string
+  name: string
+  rollNo: string
+  mentorId: string
+  mentorName: string
+  branch: string
+  college: string
+  technology: string
+  gender: string
+  avgAccuracy: number
 }
 
-export interface MentorOption {
-    id: string;
-    name: string;
+interface MainMentor {
+  id: string
+  name: string
+  email: string
 }
 
-export interface AnalyticsData {
-    branchDist: Record<string, number>;
-    genderDist: Record<string, number>;
-    techDist: Record<string, number>;
-    collegeDist: Record<string, number>;
-    courseAccuracy: SkillRadarData[];
-    moduleAccuracy: AccuracyBarData[];
-    collegeAccuracy: AccuracyBarData[];
-    heatmapRows: string[];
-    heatmapCols: string[];
-    heatmapData: number[][];
+interface Analytics {
+  mentorLeaderboard: MentorStat[]
+  poolComparison: { pool: string; avgAccuracy: number; mentorCount: number; studentCount: number }[]
+  techDistribution: { name: string; count: number }[]
+  collegeDistribution: { name: string; count: number }[]
+  genderDistribution: { gender: string; count: number }[]
+  branchDistribution: { branch: string; count: number }[]
+  courseAccuracy: { subject: string; score: number; fullMark: number }[]
+  moduleAccuracy: { name: string; score: number }[]
+  accuracyDistribution: { range: string; count: number }[]
+  trendData: { date: string; count: number }[]
+  topStudents: StudentStat[]
+  atRiskStudents: StudentStat[]
+  heatmap: { rows: string[]; cols: string[]; data: number[][] }
+  stats: {
+    totalMentors: number
+    totalStudents: number
+    totalAssessments: number
+    overallAvgAccuracy: number
+    totalDuration: number
+    totalAttempts: number
+  }
 }
 
-export interface MainMentorPageProps {
-    stats: {
-        totalStudents: number;
-        totalMentors: number;
-        branches: number;
-        avgCgpa: number;
-    };
-    mentors: MentorSummary[];
-    allStudents: StudentWithMentor[];
-    mentorOptions: MentorOption[];
-    analytics?: AnalyticsData;
+interface Props {
+  mainMentor: MainMentor
+  mentors: MentorStat[]
+  students: StudentStat[]
+  analytics: Analytics
 }
 
-/* ─── Pie color palettes ─────────────────────────────── */
-const BRANCH_COLORS: Record<string, string> = {
-    CSE: "#8b7cf6", AIML: "#6457d4", ECE: "#3b82f6", DS: "#1dbf8a",
-    IT: "#f4657e", IOT: "#f59e0b", Mech: "#d47c0a", Civil: "#0d8a62",
-};
-const GENDER_COLORS: Record<string, string> = { MALE: "#6457d4", FEMALE: "#f4657e" };
-const TECH_COLORS: Record<string, string> = {
-    AWS: "#f59e0b", "DATA ANALYTICS": "#3b82f6", FLUTTER: "#1dbf8a",
-    "FULL STACK": "#8b7cf6", SERVICENOW: "#f4657e", VLSI: "#6457d4",
-};
+const COLORS = ['#15803d', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899']
 
-/* ─── Branch colour map ──────────────────────────────── */
-const branchStyle: Record<string, { bg: string; text: string; avatarFrom: string; avatarTo: string; dot: string }> = {
-    CSE: { bg: "bg-[#f3f0ff]", text: "text-[#6457d4]", avatarFrom: "#8b7cf6", avatarTo: "#6457d4", dot: "bg-[#8b7cf6]" },
-    ECE: { bg: "bg-[#eef6ff]", text: "text-[#2563eb]", avatarFrom: "#3b82f6", avatarTo: "#1d4ed8", dot: "bg-[#3b82f6]" },
-    Mech: { bg: "bg-[#fffbeb]", text: "text-[#d47c0a]", avatarFrom: "#f59e0b", avatarTo: "#d47c0a", dot: "bg-[#f59e0b]" },
-    Civil: { bg: "bg-[#e8fdf5]", text: "text-[#0d8a62]", avatarFrom: "#1dbf8a", avatarTo: "#0d8a62", dot: "bg-[#1dbf8a]" },
-    IT: { bg: "bg-[#fff1f3]", text: "text-[#d63a5a]", avatarFrom: "#f4657e", avatarTo: "#d63a5a", dot: "bg-[#f4657e]" },
-};
-
-const loadColour = (count: number, avg: number) => {
-    if (count > avg * 1.2) return { bg: "#fff1f3", text: "#d63a5a", label: "High" };
-    if (count < avg * 0.8) return { bg: "#fffbeb", text: "#d47c0a", label: "Low" };
-    return { bg: "#e8fdf5", text: "#0d8a62", label: "Normal" };
-};
-
-function initials(name: string) {
-    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+function getHeatmapColor(value: number) {
+  const ratio = Math.min(Math.max(value / 100, 0), 1)
+  const r = Math.round(220 + (21 - 220) * ratio)
+  const g = Math.round(230 + (128 - 230) * ratio)
+  const b = Math.round(220 + (61 - 220) * ratio)
+  return `rgb(${r}, ${g}, ${b})`
 }
 
-/* ─── Stat Card ─────────────────────────────────────── */
-interface StatCardProps {
-    label: string;
-    value: string | number;
-    sub: string;
-    icon: React.ReactNode;
-    featured?: boolean;
-    iconBg?: string;
-    iconColor?: string;
-}
+export function MainMentorDashboardView({ mainMentor, mentors, students, analytics }: Props) {
+  const [search, setSearch] = useState('')
+  const [studentSearch, setStudentSearch] = useState('')
+  const [reassigningId, setReassigningId] = useState<string | null>(null)
+  const [newMentorId, setNewMentorId] = useState('')
+  const [saving, setSaving] = useState(false)
 
-function StatCard({ label, value, sub, icon, featured, iconBg, iconColor }: StatCardProps) {
-    if (featured) {
-        return (
-            <div
-                className="relative rounded-[18px] p-[18px] overflow-hidden"
-                style={{ background: "linear-gradient(135deg,#6457d4,#8b7cf6)", minHeight: 120 }}
-            >
-                {/* Subtle radial glow top-right */}
-                <div
-                    className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20 pointer-events-none"
-                    style={{ background: "radial-gradient(circle,#fff,transparent)", transform: "translate(30%,-30%)" }}
-                />
-                <p className="text-[11.5px] font-medium text-white/70 uppercase tracking-[0.3px] mb-2.5">{label}</p>
-                <p className="text-[32px] font-semibold text-white tracking-[-1px] leading-none">{value}</p>
-                <p className="text-[11.5px] text-white/70 mt-1.5 flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3 text-white/90" />
-                    <span className="text-white/90 font-medium">{sub}</span>
-                </p>
-                <div
-                    className="absolute top-4 right-4 w-9 h-9 rounded-[10px] flex items-center justify-center"
-                    style={{ background: "rgba(255,255,255,0.15)" }}
-                >
-                    <span className="text-white">{icon}</span>
-                </div>
-            </div>
-        );
+  const filteredMentors = useMemo(() => {
+    return mentors.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()))
+  }, [mentors, search])
+
+  const filteredStudents = useMemo(() => {
+    return students.filter(
+      (s) =>
+        s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+        s.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
+        s.mentorName.toLowerCase().includes(studentSearch.toLowerCase())
+    )
+  }, [students, studentSearch])
+
+  const handleReassign = async (studentId: string) => {
+    if (!newMentorId) return
+    setSaving(true)
+    const { error } = await supabase.from('students').update({ mentor_id: newMentorId }).eq('id', studentId)
+    if (!error) {
+      setReassigningId(null)
+      setNewMentorId('')
+      window.location.reload()
     }
+    setSaving(false)
+  }
 
-    return (
-        <div
-            className="relative rounded-[18px] p-[18px] overflow-hidden"
-            style={{ background: "#ffffff", border: "1px solid rgba(139,124,246,0.1)", minHeight: 120 }}
-        >
-            <p className="text-[11.5px] font-medium text-[#9892b8] uppercase tracking-[0.3px] mb-2.5">{label}</p>
-            <p className="text-[32px] font-semibold text-[#1a0f3c] tracking-[-1px] leading-none">{value}</p>
-            <p className="text-[11.5px] text-[#9892b8] mt-1.5">{sub}</p>
-            <div
-                className="absolute top-4 right-4 w-9 h-9 rounded-[10px] flex items-center justify-center"
-                style={{ background: iconBg ?? "#f3f0ff" }}
-            >
-                <span style={{ color: iconColor ?? "#6457d4" }}>{icon}</span>
+  return (
+    <div className="min-h-screen bg-[#f6f7f9] text-slate-800">
+      {/* Top Nav */}
+      <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-md">
+        <div className="flex h-16 items-center justify-between px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600">
+              <LayoutDashboard className="h-5 w-5 text-white" />
             </div>
+            <span className="text-lg font-bold text-slate-900">Hooter Loot</span>
+            <span className="hidden text-sm text-slate-300 sm:inline">|</span>
+            <span className="hidden text-sm text-slate-500 sm:inline">Command Center</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="relative hidden w-64 sm:block">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Input placeholder="Global search..." className="h-9 rounded-full border-slate-200 bg-slate-100 pl-9 text-sm text-slate-700 placeholder:text-slate-400 focus-visible:ring-emerald-500" />
+            </div>
+            <button className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100">
+              <Bell className="h-5 w-5" />
+              {analytics.atRiskStudents.length > 0 && (
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500" />
+              )}
+            </button>
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
+              <div className="h-7 w-7 rounded-full bg-emerald-600" />
+              <span className="text-xs font-medium text-slate-700">{mainMentor.name}</span>
+            </div>
+          </div>
         </div>
-    );
-}
+      </nav>
 
-/* ─── Re-assign Dialog ───────────────────────────────── */
-function ReAssignDialog({ mentorName, onConfirm }: { mentorName: string; onConfirm: () => void }) {
-    return (
-        <Dialog>
-            <DialogTrigger render={
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-[11.5px] font-medium text-[#6457d4] rounded-[10px] h-7 px-3 border border-[#8b7cf640] hover:bg-[#f3f0ff] hover:border-[#8b7cf6] transition-colors"
-                >
-                    <RefreshCw className="w-3 h-3 mr-1.5" />
-                    Re-assign
-                </Button>
-            } />
-            <DialogContent
-                className="rounded-[20px] border border-[#e4deff] shadow-xl shadow-[#8b7cf620]"
-                style={{ fontFamily: "'DM Sans', sans-serif", background: "#fff" }}
-            >
-                <DialogHeader>
-                    <DialogTitle className="text-[17px] font-semibold text-[#1a0f3c]">Re-assign Mentor</DialogTitle>
-                    <DialogDescription className="text-[13px] text-[#9892b8]">
-                        You are about to re-assign students from <span className="font-medium text-[#4a4270]">{mentorName}</span>. This will open the student assignment flow.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="gap-2 mt-2">
-                    <Button
-                        variant="outline"
-                        className="rounded-[12px] text-[13px] border-[#e4deff] text-[#4a4270] hover:bg-[#f5f3ff]"
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={onConfirm}
-                        className="rounded-[12px] text-[13px] text-white border-0"
-                        style={{ background: "linear-gradient(135deg,#6457d4,#8b7cf6)" }}
-                    >
-                        Continue
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
+      <div className="p-6 md:p-8">
+        {/* Header */}
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Command Center</h1>
+            <p className="mt-1 text-slate-500">Organization-wide intelligence across all pools</p>
+          </div>
+          <div className="flex items-center gap-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-6 py-4 shadow-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 shadow-lg shadow-emerald-200">
+              <GraduationCap className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">{mainMentor.name}</p>
+              <div className="flex items-center gap-2 text-xs text-emerald-700">
+                <Mail className="h-3 w-3" />
+                <span>{mainMentor.email}</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-/* ─── Main Component ─────────────────────────────────── */
-export function MainMentorDashboardView({ stats, mentors, allStudents, mentorOptions, analytics }: MainMentorPageProps) {
-    const [mentorList, setMentorList] = useState(mentors);
-    const [isPending, startTransition] = useTransition();
-    const avgLoad = Math.round(stats.totalStudents / (stats.totalMentors || 1));
+        {/* ─── ROW 1: 6 Big Stats ─── */}
+        <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+          <StatCard icon={<Users className="h-5 w-5 text-white" />} label="Mentors" value={analytics.stats.totalMentors} color="bg-emerald-600" />
+          <StatCard icon={<BookOpen className="h-5 w-5 text-emerald-700" />} label="Students" value={analytics.stats.totalStudents} color="bg-white" />
+          <StatCard icon={<Target className="h-5 w-5 text-sky-700" />} label="Assessments" value={analytics.stats.totalAssessments} color="bg-white" />
+          <StatCard icon={<TrendingUp className="h-5 w-5 text-amber-700" />} label="Avg Accuracy" value={`${analytics.stats.overallAvgAccuracy}%`} color="bg-white" />
+          <StatCard icon={<Clock className="h-5 w-5 text-violet-700" />} label="Total Duration" value={`${analytics.stats.totalDuration}m`} color="bg-white" />
+          <StatCard icon={<RotateCcw className="h-5 w-5 text-rose-700" />} label="Total Attempts" value={analytics.stats.totalAttempts} color="bg-white" />
+        </div>
 
-    const handleReAssign = (id: string) => {
-        console.log("Re-assign mentor:", id);
-    };
+        {/* ─── ROW 2: Mentor Leaderboard + Pool Comparison ─── */}
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <ChartCard title="Mentor Leaderboard" icon={<Award className="h-4 w-4 text-amber-600" />}>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.mentorLeaderboard.slice(0, 12)} layout="vertical" margin={{ top: 5, right: 20, left: 50, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={90} tick={{ fill: '#64748b', fontSize: 10 }} />
+                  <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                  <Bar dataKey="avgAccuracy" radius={[0, 8, 8, 0]}>
+                    {analytics.mentorLeaderboard.slice(0, 12).map((_, i) => (
+                      <Cell key={`ml-${i}`} fill={i === 0 ? '#f59e0b' : i < 3 ? '#15803d' : '#0ea5e9'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
 
-    const handleAssign = (studentId: string, mentorId: string) => {
-        startTransition(async () => {
-            const result = await assignMentor(studentId, mentorId);
-            if (result.success) {
-                toast.success("Mentor assigned successfully");
-            } else {
-                toast.error(result.error || "Failed to assign mentor");
-            }
-        });
-    };
-
-    const handleRemove = (studentId: string) => {
-        startTransition(async () => {
-            const result = await removeMentor(studentId);
-            if (result.success) {
-                toast.success("Mentor removed successfully");
-            } else {
-                toast.error(result.error || "Failed to remove mentor");
-            }
-        });
-    };
-
-    return (
-        <div
-            className="min-h-screen p-6 md:p-10"
-            style={{ background: "#f5f3ff", fontFamily: "'DM Sans', sans-serif" }}
-        >
-            {/* ── Page header ── */}
-            <div className="mb-7 flex items-end justify-between flex-wrap gap-4">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <div
-                            className="w-7 h-7 rounded-[9px] flex items-center justify-center"
-                            style={{ background: "linear-gradient(135deg,#6457d4,#8b7cf6)" }}
-                        >
-                            <GraduationCap className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="text-[12px] font-semibold text-[#8b7cf6] uppercase tracking-wider">
-                            MentorOS
-                        </span>
-                    </div>
-                    <h1 className="text-[26px] font-semibold text-[#1a0f3c] tracking-tight leading-tight">
-                        Program Overview
-                    </h1>
-                    <p className="text-[13px] text-[#9892b8] mt-0.5">Sem 2 · 2025–26</p>
+          <ChartCard title="Pool Comparison" icon={<Layers className="h-4 w-4 text-sky-600" />}>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.poolComparison} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="pool" tick={{ fill: '#64748b', fontSize: 11 }} />
+                  <YAxis domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                  <Bar dataKey="avgAccuracy" radius={[8, 8, 0, 0]} fill="#8b5cf6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-4">
+              {analytics.poolComparison.map((p) => (
+                <div key={p.pool} className="flex items-center gap-2 text-xs text-slate-500">
+                  <span className="font-semibold text-slate-700">{p.pool}</span>
+                  <span>· {p.mentorCount} mentors</span>
+                  <span>· {p.studentCount} students</span>
                 </div>
-
-                <Button
-                    className="rounded-[12px] text-[13.5px] font-medium text-white border-0 px-5 h-10"
-                    style={{ background: "linear-gradient(135deg,#6457d4,#8b7cf6)" }}
-                >
-                    + Add Mentor
-                </Button>
+              ))}
             </div>
-
-            {/* ── Stat Cards ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-7">
-                <StatCard
-                    label="Total Students"
-                    value={stats.totalStudents}
-                    sub="+12 this semester"
-                    icon={<Users className="w-[18px] h-[18px]" />}
-                    featured
-                />
-                <StatCard
-                    label="Total Mentors"
-                    value={stats.totalMentors}
-                    sub="Active this semester"
-                    icon={<UserCheck className="w-[18px] h-[18px]" />}
-                    iconBg="#f3f0ff"
-                    iconColor="#6457d4"
-                />
-                <StatCard
-                    label="Branches"
-                    value={stats.branches}
-                    sub="Departments covered"
-                    icon={<BookOpen className="w-[18px] h-[18px]" />}
-                    iconBg="#fff1f3"
-                    iconColor="#d63a5a"
-                />
-                <StatCard
-                    label="Avg. CGPA"
-                    value={stats.avgCgpa.toFixed(1)}
-                    sub="↑ 0.2 from last sem"
-                    icon={<TrendingUp className="w-[18px] h-[18px]" />}
-                    iconBg="#e8fdf5"
-                    iconColor="#0d8a62"
-                />
-            </div>
-
-            {/* ── Mentor List Card ── */}
-            <Card
-                className="border-0 shadow-lg shadow-[#8b7cf610]"
-                style={{ borderRadius: 20, background: "#ffffff" }}
-            >
-                <CardHeader
-                    className="px-[22px] pt-5 flex flex-row items-center justify-between border-b border-[#8b7cf608]"
-                    style={{ paddingBottom: 14 }}
-                >
-                    <div className="flex items-center gap-2">
-                        <span className="text-[14.5px] font-semibold text-[#1a0f3c]">All Mentors</span>
-                        <span
-                            className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                            style={{ background: "#f3f0ff", color: "#6457d4", border: "1px solid #c4b8f9" }}
-                        >
-                            {mentors.length} mentors
-                        </span>
-                    </div>
-                    <p className="text-[12px] text-[#9892b8]">
-                        Avg load: <span className="font-semibold text-[#4a4270]">{avgLoad} students</span>
-                    </p>
-                </CardHeader>
-
-                <CardContent className="p-0">
-                    <div className="divide-y divide-[#8b7cf608]">
-                        {mentorList.map((mentor) => {
-                            const br = branchStyle[mentor.department] ?? branchStyle.CSE;
-                            const load = loadColour(mentor.studentCount, avgLoad);
-
-                            return (
-                                <div
-                                    key={mentor.id}
-                                    className="flex items-center gap-4 px-[22px] py-[14px] hover:bg-[#f5f3ff] transition-colors group"
-                                >
-                                    {/* Gradient avatar */}
-                                    <div
-                                        className="w-10 h-10 rounded-[12px] flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-                                        style={{ background: `linear-gradient(135deg,${br.avatarFrom},${br.avatarTo})` }}
-                                    >
-                                        {initials(mentor.name)}
-                                    </div>
-
-                                    {/* Name + dept */}
-                                    <div className="min-w-0 flex-1">
-                                        <Link href={`/dashboard/main-mentor/mentor/${mentor.id}`} className="hover:underline">
-                                            <p className="text-[13.5px] font-semibold text-[#1a0f3c] truncate">{mentor.name}</p>
-                                        </Link>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <Badge
-                                                className={`text-[10.5px] font-medium px-2 py-0 rounded-full border-0 inline-flex items-center gap-1 ${br.bg} ${br.text}`}
-                                            >
-                                                <span className={`w-1.5 h-1.5 rounded-full ${br.dot}`} />
-                                                {mentor.department}
-                                            </Badge>
-                                            <span className="text-[11px] text-[#9892b8]">{mentor.email}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Student count pill */}
-                                    <div className="flex items-center gap-3 shrink-0">
-                                        <div className="text-right hidden sm:block">
-                                            <span
-                                                className="text-[12px] font-semibold px-2.5 py-1 rounded-[9px]"
-                                                style={{ background: "#f3f0ff", color: "#6457d4" }}
-                                            >
-                                                {mentor.studentCount} students
-                                            </span>
-                                            <div className="mt-1 flex justify-end">
-                                                <span
-                                                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                                                    style={{ background: load.bg, color: load.text }}
-                                                >
-                                                    {load.label}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Re-assign */}
-                                        <ReAssignDialog
-                                            mentorName={mentor.name}
-                                            onConfirm={() => handleReAssign(mentor.id)}
-                                        />
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="px-[22px] py-3.5 border-t border-[#8b7cf608] flex items-center justify-between">
-                        <span className="text-[12px] text-[#9892b8]">
-                            {mentors.length} mentors · {stats.totalStudents} students total
-                        </span>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-[12px] text-[#9892b8] hover:text-[#6457d4] hover:bg-[#f3f0ff] rounded-[10px] h-7 px-3"
-                        >
-                            Export roster
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* ── All Students Assignment Table ── */}
-            <Card
-                className="border-0 shadow-lg shadow-[#8b7cf610] mt-7"
-                style={{ borderRadius: 20, background: "#ffffff" }}
-            >
-                <CardHeader
-                    className="px-[22px] pt-5 flex flex-row items-center justify-between border-b border-[#8b7cf608]"
-                    style={{ paddingBottom: 14 }}
-                >
-                    <div className="flex items-center gap-2">
-                        <span className="text-[14.5px] font-semibold text-[#1a0f3c]">Student ↔ Mentor Assignment</span>
-                        <span
-                            className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                            style={{ background: "#f3f0ff", color: "#6457d4", border: "1px solid #c4b8f9" }}
-                        >
-                            {allStudents.length} students
-                        </span>
-                    </div>
-                </CardHeader>
-
-                <CardContent className="p-0">
-                    <div className="divide-y divide-[#8b7cf608]">
-                        {allStudents.map((student) => {
-                            const br = branchStyle[student.branch] ?? branchStyle.CSE;
-                            return (
-                                <div
-                                    key={student.id}
-                                    className="flex items-center gap-4 px-[22px] py-[14px] hover:bg-[#f5f3ff] transition-colors"
-                                >
-                                    {/* Student avatar */}
-                                    <div
-                                        className="w-9 h-9 rounded-[10px] flex items-center justify-center text-white text-[11px] font-semibold flex-shrink-0"
-                                        style={{ background: `linear-gradient(135deg,${br.avatarFrom},${br.avatarTo})` }}
-                                    >
-                                        {initials(student.name)}
-                                    </div>
-
-                                    {/* Name + Roll + Branch */}
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[13.5px] font-semibold text-[#1a0f3c] truncate">{student.name}</p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-[11px] text-[#9892b8]" style={{ fontFamily: "'DM Mono', monospace" }}>
-                                                {student.rollNo}
-                                            </span>
-                                            <Badge
-                                                className={`text-[10px] font-medium px-1.5 py-0 rounded-full border-0 inline-flex items-center gap-1 ${br.bg} ${br.text}`}
-                                            >
-                                                <span className={`w-1 h-1 rounded-full ${br.dot}`} />
-                                                {student.branch}
-                                            </Badge>
-                                        </div>
-                                    </div>
-
-                                    {/* Mentor Assignment */}
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <Select
-                                            value={student.mentorId || ""}
-                                            onValueChange={(value) => handleAssign(student.id, value)}
-                                            disabled={isPending}
-                                        >
-                                            <SelectTrigger
-                                                className="w-[180px] h-8 rounded-[10px] text-[12px] border-[#e4deff] bg-[#f5f3ff] text-[#4a4270] focus:ring-[#8b7cf6]"
-                                            >
-                                                <SelectValue placeholder="Assign mentor…" />
-                                            </SelectTrigger>
-                                            <SelectContent
-                                                className="rounded-[12px] border-[#e4deff]"
-                                                style={{ fontFamily: "'DM Sans', sans-serif" }}
-                                            >
-                                                {mentorOptions.map((m) => (
-                                                    <SelectItem
-                                                        key={m.id}
-                                                        value={m.id}
-                                                        className="text-[12px] text-[#1a0f3c] rounded-[8px]"
-                                                    >
-                                                        {m.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-
-                                        {/* Remove button (only when assigned) */}
-                                        {student.mentorId && (
-                                            <button
-                                                onClick={() => handleRemove(student.id)}
-                                                disabled={isPending}
-                                                className="w-7 h-7 rounded-[8px] flex items-center justify-center text-[#d63a5a] bg-[#fff1f3] hover:bg-[#ffe0e5] transition-colors disabled:opacity-50"
-                                                title="Remove mentor"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="px-[22px] py-3.5 border-t border-[#8b7cf608] flex items-center">
-                        <span className="text-[12px] text-[#9892b8]">
-                            {allStudents.filter(s => s.mentorId).length} of {allStudents.length} students assigned
-                        </span>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* ══════════════════════════════════════════════════ */}
-            {/* ── PROGRAM ANALYTICS ──                           */}
-            {/* ══════════════════════════════════════════════════ */}
-            {analytics && (
-                <>
-                    {/* Section header */}
-                    <div className="mt-10 mb-5">
-                        <h2 className="text-[22px] font-semibold text-[#1a0f3c] tracking-tight">Program Analytics</h2>
-                        <p className="text-[13px] text-[#9892b8] mt-0.5">Deep insights across all students, mentors, and assessments</p>
-                    </div>
-
-                    {/* Row 1 — Distribution Pie Charts */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-                        {/* Branch Distribution */}
-                        <Card className="border-0 shadow-lg shadow-[#8b7cf610]" style={{ borderRadius: 20, background: "#fff" }}>
-                            <CardHeader className="px-[22px] pt-4 pb-0">
-                                <span className="text-[13px] font-semibold text-[#1a0f3c]">Branch Distribution</span>
-                            </CardHeader>
-                            <CardContent className="px-[22px] pb-4">
-                                <DistributionPie
-                                    data={Object.entries(analytics.branchDist).map(([name, value]) => ({
-                                        name, value, color: BRANCH_COLORS[name] || "#9892b8",
-                                    }))}
-                                    height={220}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        {/* Gender Distribution */}
-                        <Card className="border-0 shadow-lg shadow-[#8b7cf610]" style={{ borderRadius: 20, background: "#fff" }}>
-                            <CardHeader className="px-[22px] pt-4 pb-0">
-                                <span className="text-[13px] font-semibold text-[#1a0f3c]">Gender Distribution</span>
-                            </CardHeader>
-                            <CardContent className="px-[22px] pb-4">
-                                <DistributionPie
-                                    data={Object.entries(analytics.genderDist).map(([name, value]) => ({
-                                        name, value, color: GENDER_COLORS[name] || "#9892b8",
-                                    }))}
-                                    height={220}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        {/* Technology Distribution */}
-                        <Card className="border-0 shadow-lg shadow-[#8b7cf610]" style={{ borderRadius: 20, background: "#fff" }}>
-                            <CardHeader className="px-[22px] pt-4 pb-0">
-                                <span className="text-[13px] font-semibold text-[#1a0f3c]">Technology Distribution</span>
-                            </CardHeader>
-                            <CardContent className="px-[22px] pb-4">
-                                <DistributionPie
-                                    data={Object.entries(analytics.techDist).map(([name, value]) => ({
-                                        name, value, color: TECH_COLORS[name] || "#9892b8",
-                                    }))}
-                                    height={220}
-                                />
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Row 2 — Course Radar + College Bar (2-column) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-                        {/* Course Performance Radar */}
-                        <Card className="border-0 shadow-lg shadow-[#8b7cf610]" style={{ borderRadius: 20, background: "#fff" }}>
-                            <CardHeader className="px-[22px] pt-4 pb-0">
-                                <span className="text-[13px] font-semibold text-[#1a0f3c]">Course Performance — Radar</span>
-                                <p className="text-[11px] text-[#9892b8] mt-0.5">Average accuracy across 4 courses</p>
-                            </CardHeader>
-                            <CardContent className="px-[22px] pb-4">
-                                <SkillRadar data={analytics.courseAccuracy} height={280} />
-                            </CardContent>
-                        </Card>
-
-                        {/* College Comparison Bar */}
-                        <Card className="border-0 shadow-lg shadow-[#8b7cf610]" style={{ borderRadius: 20, background: "#fff" }}>
-                            <CardHeader className="px-[22px] pt-4 pb-0">
-                                <span className="text-[13px] font-semibold text-[#1a0f3c]">College Comparison</span>
-                                <p className="text-[11px] text-[#9892b8] mt-0.5">Average accuracy by college</p>
-                            </CardHeader>
-                            <CardContent className="px-[22px] pb-4">
-                                <AccuracyBarChart data={analytics.collegeAccuracy} height={280} colorScale />
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Row 3 — Module Performance Bars (full width) */}
-                    <Card className="border-0 shadow-lg shadow-[#8b7cf610] mb-5" style={{ borderRadius: 20, background: "#fff" }}>
-                        <CardHeader className="px-[22px] pt-4 pb-0">
-                            <span className="text-[13px] font-semibold text-[#1a0f3c]">Module Performance Ranking</span>
-                            <p className="text-[11px] text-[#9892b8] mt-0.5">All 16 modules ranked by average accuracy</p>
-                        </CardHeader>
-                        <CardContent className="px-[22px] pb-4">
-                            <AccuracyBarChart
-                                data={analytics.moduleAccuracy}
-                                height={500}
-                                layout="vertical"
-                                colorScale
-                            />
-                        </CardContent>
-                    </Card>
-
-                    {/* Row 4 — Mentor × Course Heatmap (full width) */}
-                    <Card className="border-0 shadow-lg shadow-[#8b7cf610] mb-5" style={{ borderRadius: 20, background: "#fff" }}>
-                        <CardHeader className="px-[22px] pt-4 pb-0">
-                            <span className="text-[13px] font-semibold text-[#1a0f3c]">Mentor × Course Heatmap</span>
-                            <p className="text-[11px] text-[#9892b8] mt-0.5">Average accuracy per mentor per course — color intensity shows performance</p>
-                        </CardHeader>
-                        <CardContent className="px-[22px] pb-4 pt-3">
-                            <HeatmapGrid
-                                rows={analytics.heatmapRows}
-                                cols={analytics.heatmapCols}
-                                data={analytics.heatmapData}
-                            />
-                        </CardContent>
-                    </Card>
-                </>
-            )}
-
-            <Toaster
-                position="bottom-right"
-                toastOptions={{
-                    style: {
-                        borderRadius: '12px',
-                        background: '#1a0f3c',
-                        color: '#fff',
-                        fontSize: '13px',
-                        fontFamily: "'DM Sans', sans-serif",
-                    },
-                }}
-            />
+          </ChartCard>
         </div>
-    );
+
+        {/* ─── ROW 3: Tech Pie + College Donut + Gender Pie ─── */}
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <ChartCard title="Technology Distribution" icon={<Cpu className="h-4 w-4 text-cyan-600" />}>
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={analytics.techDistribution} cx="50%" cy="50%" outerRadius={90} dataKey="count" nameKey="name" label={({ name, value }) => `${name}: ${value}`}>
+                    {analytics.techDistribution.map((_, i) => (
+                      <Cell key={`tech-${i}`} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+
+          <ChartCard title="College Distribution" icon={<Building2 className="h-4 w-4 text-violet-600" />}>
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={analytics.collegeDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={3} dataKey="count" nameKey="name">
+                    {analytics.collegeDistribution.map((_, i) => (
+                      <Cell key={`col-${i}`} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              {analytics.collegeDistribution.slice(0, 5).map((c, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                  <span className="text-[10px] text-slate-500">{c.name}</span>
+                </div>
+              ))}
+            </div>
+          </ChartCard>
+
+          <ChartCard title="Gender Split" icon={<Users className="h-4 w-4 text-pink-600" />}>
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={analytics.genderDistribution} cx="50%" cy="50%" outerRadius={90} dataKey="count" nameKey="gender" label={({ name, value }) => `${name}: ${value}`}>
+                    {analytics.genderDistribution.map((_, i) => (
+                      <Cell key={`gen-${i}`} fill={['#15803d', '#ec4899', '#94a3b8'][i % 3]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+        </div>
+
+        {/* ─── ROW 4: Branch Bar + Course Radar + Module Bar ─── */}
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <ChartCard title="Branch Distribution" icon={<Layers className="h-4 w-4 text-orange-600" />}>
+            <div className="h-[280px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.branchDistribution} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="branch" tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                  <Bar dataKey="count" radius={[8, 8, 0, 0]} fill="#f59e0b" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+
+          <ChartCard title="Course Accuracy (All Pools)" icon={<Activity className="h-4 w-4 text-emerald-600" />}>
+            <div className="h-[280px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={analytics.courseAccuracy}>
+                  <PolarGrid stroke="#e2e8f0" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                  <Radar name="Accuracy" dataKey="score" stroke="#15803d" fill="#15803d" fillOpacity={0.15} strokeWidth={2} />
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+
+          <ChartCard title="Module Performance (All Pools)" icon={<BarChart3 className="h-4 w-4 text-sky-600" />}>
+            <div className="h-[280px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.moduleAccuracy} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 9 }} angle={-25} textAnchor="end" height={60} />
+                  <YAxis domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                  <Bar dataKey="score" radius={[8, 8, 0, 0]}>
+                    {analytics.moduleAccuracy.map((_, i) => (
+                      <Cell key={`mod-${i}`} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+        </div>
+
+        {/* ─── ROW 5: Accuracy Dist + Timeline + Top Students ─── */}
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <ChartCard title="Student Accuracy Distribution" icon={<PieIcon className="h-4 w-4 text-rose-600" />}>
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={analytics.accuracyDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="count" nameKey="range">
+                    {analytics.accuracyDistribution.map((_, i) => (
+                      <Cell key={`ad-${i}`} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              {analytics.accuracyDistribution.map((d, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                  <span className="text-[10px] text-slate-500">{d.range}% ({d.count})</span>
+                </div>
+              ))}
+            </div>
+          </ChartCard>
+
+          <ChartCard title="Assessment Timeline" icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} className="lg:col-span-2">
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analytics.trendData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="colorMain" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#15803d" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#15803d" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                  <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                  <Area type="monotone" dataKey="count" stroke="#15803d" fillOpacity={1} fill="url(#colorMain)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+        </div>
+
+        {/* ─── ROW 6: Top Students + At-Risk Students ─── */}
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <ChartCard title="Top Performers (All Pools)" icon={<Award className="h-4 w-4 text-amber-600" />}>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.topStudents} layout="vertical" margin={{ top: 5, right: 20, left: 50, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={100} tick={{ fill: '#64748b', fontSize: 10 }} />
+                  <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+                  <Bar dataKey="avgAccuracy" radius={[0, 8, 8, 0]} fill="#15803d" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+
+          <ChartCard title="At-Risk Students (Below 45%)" icon={<AlertTriangle className="h-4 w-4 text-rose-600" />}>
+            <div className="flex h-[300px] flex-col gap-2 overflow-y-auto pr-1">
+              {analytics.atRiskStudents.length === 0 ? (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-sm text-slate-400">No at-risk students. Great job!</p>
+                </div>
+              ) : (
+                analytics.atRiskStudents.map((s) => (
+                  <Link key={s.id} href={`/dashboard/main-mentor/student/${s.id}`}>
+                    <div className="flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50/50 px-4 py-3 transition-colors hover:bg-rose-50">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{s.name}</p>
+                        <p className="text-[10px] text-slate-500">{s.rollNo} · {s.mentorName} · {s.branch}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[10px] font-bold text-rose-700">
+                          {s.avgAccuracy}%
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-rose-300" />
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </ChartCard>
+        </div>
+
+        {/* ─── ROW 7: Cross-Pool Heatmap ─── */}
+        <ChartCard title="Cross-Pool Student × Module Heatmap" icon={<Layers className="h-4 w-4 text-indigo-600" />} className="mb-8">
+          <div className="overflow-x-auto">
+            <div className="min-w-[700px]">
+              <div className="grid" style={{ gridTemplateColumns: `160px repeat(${analytics.heatmap.cols.length}, minmax(70px, 1fr))` }}>
+                <div className="p-2 text-xs font-semibold text-slate-400">Student</div>
+                {analytics.heatmap.cols.map((col, ci) => (
+                  <div key={`hh-${col}-${ci}`} className="p-2 text-center text-[10px] font-medium text-slate-500">{col}</div>
+                ))}
+              </div>
+              {analytics.heatmap.rows.map((row, ri) => (
+                <div key={`hr-${row}-${ri}`} className="grid" style={{ gridTemplateColumns: `160px repeat(${analytics.heatmap.cols.length}, minmax(70px, 1fr))` }}>
+                  <div className="flex items-center p-2 text-xs font-medium text-slate-700 truncate" title={row}>{row}</div>
+                  {analytics.heatmap.data[ri]?.map((val, ci) => (
+                    <div key={`hc-${row}-${ri}-${ci}`} className="m-0.5 flex items-center justify-center rounded-md py-2 text-[10px] font-bold text-slate-800" style={{ backgroundColor: getHeatmapColor(val) }} title={`${row} · ${analytics.heatmap.cols[ci]}: ${val}%`}>
+                      {val > 0 ? val.toFixed(1) : '-'}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </ChartCard>
+
+        {/* ─── ROW 8: Mentor Cards ─── */}
+        <div className="mb-8">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900">Mentor Directory</h2>
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Input placeholder="Filter mentors..." className="rounded-full border-slate-200 bg-white pl-9 text-sm text-slate-700 placeholder:text-slate-400 focus-visible:ring-emerald-500" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredMentors.map((m) => (
+              <Link key={m.id} href={`/dashboard/main-mentor/mentor/${m.id}`}>
+                <Card className="group cursor-pointer border-slate-100 bg-white shadow-sm transition-all hover:border-emerald-200 hover:shadow-md">
+                  <CardContent className="p-5">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+                        <UserCheck className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+                        Pool {m.poolNo ?? '—'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm font-bold text-slate-900 group-hover:text-emerald-700">{m.name}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                        <p className="text-slate-400">Students</p>
+                        <p className="font-semibold text-slate-700">{m.studentCount}</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                        <p className="text-slate-400">Accuracy</p>
+                        <p className="font-semibold text-slate-700">{m.avgAccuracy}%</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                        <p className="text-slate-400">Duration</p>
+                        <p className="font-semibold text-slate-700">{m.totalDuration}m</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                        <p className="text-slate-400">Attempts</p>
+                        <p className="font-semibold text-slate-700">{m.totalAttempts}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-1 text-xs font-medium text-emerald-600">
+                      <span>View Details</span>
+                      <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* ─── ROW 9: Student Assignment Control ─── */}
+        <ChartCard title="Student Assignment Control" icon={<UserCheck className="h-4 w-4 text-emerald-600" />}>
+          <div className="mb-4 relative w-full sm:w-80">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input placeholder="Search students..." className="rounded-full border-slate-200 bg-white pl-9 text-sm text-slate-700 placeholder:text-slate-400 focus-visible:ring-emerald-500" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50 text-left text-xs text-slate-400">
+                  <th className="px-3 py-3 font-medium">Roll No</th>
+                  <th className="px-3 py-3 font-medium">Name</th>
+                  <th className="px-3 py-3 font-medium">Current Mentor</th>
+                  <th className="px-3 py-3 font-medium">Branch</th>
+                  <th className="px-3 py-3 font-medium">Accuracy</th>
+                  <th className="px-3 py-3 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.slice(0, 20).map((s) => (
+                  <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/50">
+                    <td className="px-3 py-3 font-mono text-xs text-slate-500"><Hash className="inline h-3 w-3 mr-1" />{s.rollNo}</td>
+                    <td className="px-3 py-3 font-medium text-slate-800">{s.name}</td>
+                    <td className="px-3 py-3">
+                      {reassigningId === s.id ? (
+                        <select
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-emerald-500 focus:outline-none"
+                          value={newMentorId}
+                          onChange={(e) => setNewMentorId(e.target.value)}
+                        >
+                          <option value="">Select mentor...</option>
+                          {mentors.map((m) => (
+                            <option key={m.id} value={m.id}>{m.name} (Pool {m.poolNo ?? '—'})</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Badge variant="secondary" className="bg-emerald-50 text-emerald-700">{s.mentorName}</Badge>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-slate-500">{s.branch}</td>
+                    <td className="px-3 py-3">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.avgAccuracy >= 80 ? 'bg-emerald-100 text-emerald-700' : s.avgAccuracy >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                        {s.avgAccuracy}%
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      {reassigningId === s.id ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="sm" variant="ghost" className="h-7 text-slate-400 hover:text-slate-700" onClick={() => { setReassigningId(null); setNewMentorId('') }} disabled={saving}>
+                            Cancel
+                          </Button>
+                          <Button size="sm" className="h-7 bg-emerald-600 text-xs hover:bg-emerald-500" onClick={() => handleReassign(s.id)} disabled={saving || !newMentorId}>
+                            {saving ? 'Saving...' : 'Confirm'}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          <Link href={`/dashboard/main-mentor/student/${s.id}`}>
+                            <Button size="sm" variant="ghost" className="h-7 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50">
+                              View
+                            </Button>
+                          </Link>
+                          <Button size="sm" variant="ghost" className="h-7 text-slate-500 hover:text-indigo-700 hover:bg-indigo-50" onClick={() => { setReassigningId(s.id); setNewMentorId(s.mentorId) }}>
+                            Reassign
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ChartCard>
+      </div>
+    </div>
+  )
+}
+
+function ChartCard({ children, title, icon, className = '' }: { children: React.ReactNode; title: string; icon: React.ReactNode; className?: string }) {
+  return (
+    <Card className={`border-slate-100 bg-white shadow-sm ${className}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-800">
+          {icon}
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  )
+}
+
+function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
+  const isGreen = color === 'bg-emerald-600'
+  return (
+    <Card className={`${color} border-0 shadow-sm`}>
+      <CardContent className="flex items-center gap-3 p-5">
+        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isGreen ? 'bg-white/20' : 'bg-slate-100'}`}>
+          {icon}
+        </div>
+        <div>
+          <p className={`text-[11px] font-medium ${isGreen ? 'text-emerald-100' : 'text-slate-500'}`}>{label}</p>
+          <p className={`text-xl font-bold ${isGreen ? 'text-white' : 'text-slate-900'}`}>{value}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }

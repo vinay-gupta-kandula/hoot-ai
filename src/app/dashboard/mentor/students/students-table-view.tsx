@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import {
   Search, ArrowLeft, Save, RotateCcw, GraduationCap, Hash, User,
-  Building2, Cpu, CheckCircle2, AlertCircle, Pencil,
+  Building2, Cpu, CheckCircle2, AlertCircle, Pencil, Bell,
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -101,21 +101,27 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-slate-100">
+    <div className="min-h-screen bg-[#f6f7f9] text-slate-800">
       {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-slate-800 bg-[#0a0a0f]/80 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-md">
         <div className="flex h-16 items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <Link href="/dashboard/mentor">
-              <Button variant="ghost" size="sm" className="gap-2 text-slate-400 hover:text-white hover:bg-slate-800">
+              <Button variant="ghost" size="sm" className="gap-2 rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Dashboard
               </Button>
             </Link>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <GraduationCap className="h-3 w-3" />
-            <span>{mentorName}</span>
+          <div className="flex items-center gap-4">
+            <button className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100">
+              <Bell className="h-5 w-5" />
+              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500" />
+            </button>
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <GraduationCap className="h-3 w-3" />
+              <span>{mentorName}</span>
+            </div>
           </div>
         </div>
       </nav>
@@ -123,14 +129,14 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
       <div className="p-6 md:p-8">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Student Roster</h1>
-            <p className="mt-1 text-sm text-slate-400">Edit non-critical info. Name and Roll No are locked.</p>
+            <h1 className="text-2xl font-bold text-slate-900">Student Roster</h1>
+            <p className="mt-1 text-sm text-slate-500">Edit non-critical info. Name and Roll No are locked.</p>
           </div>
           <div className="relative w-full sm:w-80">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input
               placeholder="Search by name, roll no, or branch..."
-              className="border-slate-700 bg-slate-950 pl-9 text-slate-200 placeholder:text-slate-600 focus-visible:ring-indigo-500"
+              className="rounded-full border-slate-200 bg-white pl-10 text-slate-700 placeholder:text-slate-400 focus-visible:ring-emerald-500"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -138,18 +144,18 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
         </div>
 
         {toast && (
-          <div className={`mb-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${toast.type === 'success' ? 'border-emerald-800 bg-emerald-950/30 text-emerald-400' : 'border-rose-800 bg-rose-950/30 text-rose-400'}`}>
+          <div className={`mb-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${toast.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
             {toast.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
             {toast.message}
           </div>
         )}
 
-        <Card className="border-slate-800 bg-slate-900/60 backdrop-blur">
+        <Card className="border-slate-100 bg-white shadow-sm">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/50 text-left text-xs text-slate-500">
+                  <tr className="border-b border-slate-100 bg-slate-50/50 text-left text-xs text-slate-400">
                     <th className="px-4 py-3 font-medium">Roll No</th>
                     <th className="px-4 py-3 font-medium">Name</th>
                     <th className="px-4 py-3 font-medium">Branch</th>
@@ -163,7 +169,7 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
                   {filtered.map((s) => {
                     const isEditing = editingId === s.id
                     return (
-                      <tr key={s.id} className="border-b border-slate-800/50 transition-colors hover:bg-slate-800/30">
+                      <tr key={s.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/50">
                         {/* Roll No — LOCKED */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2 text-slate-400">
@@ -175,8 +181,8 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
                         {/* Name — LOCKED */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <User className="h-3.5 w-3.5 text-slate-500" />
-                            <span className="font-medium text-slate-200">{s.name}</span>
+                            <User className="h-3.5 w-3.5 text-slate-400" />
+                            <span className="font-medium text-slate-800">{s.name}</span>
                           </div>
                         </td>
 
@@ -184,7 +190,7 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
                         <td className="px-4 py-3">
                           {isEditing ? (
                             <select
-                              className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none"
+                              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                               value={editForm.branch || s.branch}
                               onChange={(e) => setEditForm((p) => ({ ...p, branch: e.target.value }))}
                             >
@@ -193,7 +199,7 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
                               ))}
                             </select>
                           ) : (
-                            <Badge variant="secondary" className="bg-slate-800 text-indigo-300">{s.branch}</Badge>
+                            <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100">{s.branch}</Badge>
                           )}
                         </td>
 
@@ -201,16 +207,16 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
                         <td className="px-4 py-3">
                           {isEditing ? (
                             <div className="flex items-center gap-1.5">
-                              <Building2 className="h-3 w-3 text-slate-600" />
+                              <Building2 className="h-3 w-3 text-slate-400" />
                               <Input
-                                className="h-7 w-32 border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+                                className="h-8 w-32 rounded-lg border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus-visible:ring-emerald-500"
                                 value={editForm.college || ''}
                                 onChange={(e) => setEditForm((p) => ({ ...p, college: e.target.value }))}
                                 placeholder="College"
                               />
                             </div>
                           ) : (
-                            <span className="text-slate-400">{s.college || '—'}</span>
+                            <span className="text-slate-500">{s.college || '—'}</span>
                           )}
                         </td>
 
@@ -218,16 +224,16 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
                         <td className="px-4 py-3">
                           {isEditing ? (
                             <div className="flex items-center gap-1.5">
-                              <Cpu className="h-3 w-3 text-slate-600" />
+                              <Cpu className="h-3 w-3 text-slate-400" />
                               <Input
-                                className="h-7 w-32 border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+                                className="h-8 w-32 rounded-lg border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus-visible:ring-emerald-500"
                                 value={editForm.technology || ''}
                                 onChange={(e) => setEditForm((p) => ({ ...p, technology: e.target.value }))}
                                 placeholder="Technology"
                               />
                             </div>
                           ) : (
-                            <span className="text-slate-400">{s.technology || '—'}</span>
+                            <span className="text-slate-500">{s.technology || '—'}</span>
                           )}
                         </td>
 
@@ -235,7 +241,7 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
                         <td className="px-4 py-3">
                           {isEditing ? (
                             <select
-                              className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none"
+                              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                               value={editForm.gender || s.gender}
                               onChange={(e) => setEditForm((p) => ({ ...p, gender: e.target.value }))}
                             >
@@ -244,7 +250,7 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
                               ))}
                             </select>
                           ) : (
-                            <span className={`text-xs font-medium ${s.gender === 'MALE' ? 'text-cyan-400' : s.gender === 'FEMALE' ? 'text-pink-400' : 'text-slate-500'}`}>
+                            <span className={`text-xs font-medium ${s.gender === 'MALE' ? 'text-sky-600' : s.gender === 'FEMALE' ? 'text-pink-600' : 'text-slate-400'}`}>
                               {s.gender}
                             </span>
                           )}
@@ -254,16 +260,16 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
                         <td className="px-4 py-3 text-right">
                           {isEditing ? (
                             <div className="flex items-center justify-end gap-2">
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-slate-400 hover:text-white" onClick={cancelEdit} disabled={saving}>
+                              <Button size="sm" variant="ghost" className="h-8 w-8 rounded-full p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={cancelEdit} disabled={saving}>
                                 <RotateCcw className="h-3.5 w-3.5" />
                               </Button>
-                              <Button size="sm" className="h-7 gap-1 bg-indigo-600 px-3 text-xs hover:bg-indigo-500" onClick={() => saveEdit(s.id)} disabled={saving}>
+                              <Button size="sm" className="h-8 gap-1 rounded-full bg-emerald-600 px-4 text-xs hover:bg-emerald-500" onClick={() => saveEdit(s.id)} disabled={saving}>
                                 <Save className="h-3.5 w-3.5" />
                                 {saving ? 'Saving...' : 'Save'}
                               </Button>
                             </div>
                           ) : (
-                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/10" onClick={() => startEdit(s)}>
+                            <Button size="sm" variant="ghost" className="h-8 gap-1 rounded-full text-slate-500 hover:bg-emerald-50 hover:text-emerald-700" onClick={() => startEdit(s)}>
                               <Pencil className="h-3.5 w-3.5" />
                               Edit
                             </Button>
@@ -274,7 +280,7 @@ export function StudentsTableView({ students: initialStudents, mentorName }: Pro
                   })}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-sm text-slate-500">
+                      <td colSpan={7} className="py-12 text-center text-sm text-slate-400">
                         No students found.
                       </td>
                     </tr>
