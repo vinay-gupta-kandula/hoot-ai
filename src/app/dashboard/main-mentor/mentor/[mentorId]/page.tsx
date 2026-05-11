@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { MentorDetailView } from './mentor-detail-view'
+import { AssessmentRow, StudentRow, MentorRow } from '@/types/types'
 
 export default async function MentorDetailPage({ params }: { params: Promise<{ mentorId: string }> }) {
   const { mentorId } = await params
@@ -10,17 +11,15 @@ export default async function MentorDetailPage({ params }: { params: Promise<{ m
 
   if (!user) redirect('/login')
 
-  const supabaseAdmin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-
   // Fetch mentor + students + assessments in parallel
   const [
     { data: mentor },
     { data: students },
     { data: assessments },
   ] = await Promise.all([
-    supabaseAdmin.from('mentors').select('*').eq('id', mentorId).single(),
-    supabaseAdmin.from('students').select('*').eq('mentor_id', mentorId),
-    supabaseAdmin.from('assessments').select('*').eq('mentor_id', mentorId),
+    supabaseAdmin.from('mentors').select('*').eq('id', mentorId).single<MentorRow>(),
+    supabaseAdmin.from('students').select('*').eq('mentor_id', mentorId).returns<StudentRow[]>(),
+    supabaseAdmin.from('assessments').select('*').eq('mentor_id', mentorId).returns<AssessmentRow[]>(),
   ])
 
   if (!mentor) return <div>Mentor not found.</div>
@@ -33,7 +32,7 @@ export default async function MentorDetailPage({ params }: { params: Promise<{ m
   const moduleMap: Record<string, { sum: number; count: number; course: string; duration: number; attempts: number }> = {}
   const studentAccMap: Record<string, { sum: number; count: number }> = {}
 
-  assessmentsList.forEach((a: any) => {
+  assessmentsList.forEach((a) => {
     const acc = Number(a.accuracy)
     if (a.course_name) {
       if (!courseMap[a.course_name]) courseMap[a.course_name] = { sum: 0, count: 0 }
@@ -70,14 +69,14 @@ export default async function MentorDetailPage({ params }: { params: Promise<{ m
   const genderDist: Record<string, number> = {}
   const techDist: Record<string, number> = {}
 
-  studentsList.forEach((s: any) => {
+  studentsList.forEach((s) => {
     if (s.branch) branchDist[s.branch] = (branchDist[s.branch] || 0) + 1
     if (s.gender) genderDist[s.gender] = (genderDist[s.gender] || 0) + 1
     if (s.technology) techDist[s.technology] = (techDist[s.technology] || 0) + 1
   })
 
   // Student leaderboard
-  const studentLeaderboard = studentsList.map((s: any) => {
+  const studentLeaderboard = studentsList.map((s) => {
     const acc = studentAccMap[s.id]
     return {
       id: s.id,
@@ -91,7 +90,7 @@ export default async function MentorDetailPage({ params }: { params: Promise<{ m
 
   // Student x course heatmap
   const studentCourseMap: Record<string, Record<string, { sum: number; count: number }>> = {}
-  assessmentsList.forEach((a: any) => {
+  assessmentsList.forEach((a) => {
     if (!a.student_id || !a.course_name) return
     if (!studentCourseMap[a.student_id]) studentCourseMap[a.student_id] = {}
     if (!studentCourseMap[a.student_id][a.course_name])
@@ -110,7 +109,7 @@ export default async function MentorDetailPage({ params }: { params: Promise<{ m
   )
 
   const totalAvgAcc = assessmentsList.length > 0
-    ? Math.round(assessmentsList.reduce((s: number, a: any) => s + Number(a.accuracy), 0) / assessmentsList.length * 10) / 10
+    ? Math.round(assessmentsList.reduce((s: number, a) => s + Number(a.accuracy), 0) / assessmentsList.length * 10) / 10
     : 0
 
   return (

@@ -21,7 +21,7 @@ interface Props {
 
 const MOCK_READING_CONTENT = {
   title: "The Future of AI in Education",
-  text: "Artificial intelligence is revolutionizing the way we approach learning. By providing personalized feedback and adapting to individual student needs, AI tools can bridge the gap in educational accessibility. However, the human element remains irreplaceable. Mentors provide the emotional support and critical thinking guidance that algorithms cannot replicate...",
+  text: "Artificial intelligence is revolutionizing the way we approach learning. By providing personalized feedback and adapting to individual student needs, AI tools can bridge the gap in educational accessibility. However, the human element remains irreplaceable. Mentors provide the emotional support and critical thinking guidance that algorithms cannot replicate.",
   questions: [
     {
       id: 1,
@@ -44,16 +44,56 @@ const MOCK_READING_CONTENT = {
   ]
 }
 
+const MOCK_LISTENING_CONTENT = {
+  title: "A Conversation about Teamwork",
+  text: "Welcome to today's seminar on professional development. Effective teamwork is the backbone of any successful organization. It's not just about group work; it's about synergy. When individuals combine their unique strengths towards a common goal, the results are exponentially greater than the sum of their parts. Communication is the fuel that keeps this engine running.",
+  questions: [
+    {
+      id: 1,
+      question: "What does the speaker describe as the 'backbone' of a successful organization?",
+      options: ["Individual hard work", "Financial capital", "Effective teamwork", "Technological innovation"],
+      correct: 2
+    },
+    {
+      id: 2,
+      question: "According to the speaker, what is 'synergy'?",
+      options: ["Working in isolation", "Combining unique strengths", "Doing double the work", "Ignoring group goals"],
+      correct: 1
+    },
+    {
+      id: 3,
+      question: "What is described as the 'fuel' that keeps the engine running?",
+      options: ["Money", "Management", "Communication", "Technology"],
+      correct: 2
+    }
+  ]
+}
+
 export function PracticeView({ student, moduleName, moduleSlug }: Props) {
   const router = useRouter()
   const supabase = createClient()
   
+  const isListening = moduleSlug.includes('listening')
+  const content = isListening ? MOCK_LISTENING_CONTENT : MOCK_READING_CONTENT
+
   const [step, setStep] = useState<'intro' | 'active' | 'complete'>('intro')
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<number[]>([])
   const [startTime, setStartTime] = useState<number>(0)
   const [duration, setDuration] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+
+  const speak = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      const utterance = new SpeechSynthesisUtterance(content.text)
+      utterance.rate = 0.9
+      utterance.onstart = () => setIsSpeaking(true)
+      utterance.onend = () => setIsSpeaking(false)
+      window.speechSynthesis.speak(utterance)
+    }
+  }
 
   // Start timer when practice begins
   useEffect(() => {
@@ -71,16 +111,17 @@ export function PracticeView({ student, moduleName, moduleSlug }: Props) {
   }
 
   const handleNext = () => {
-    if (currentQuestion < MOCK_READING_CONTENT.questions.length - 1) {
+    if (currentQuestion < content.questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
     } else {
       setStep('complete')
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel()
     }
   }
 
   const calculateAccuracy = () => {
-    const correctCount = answers.filter((ans, i) => ans === MOCK_READING_CONTENT.questions[i].correct).length
-    return Math.round((correctCount / MOCK_READING_CONTENT.questions.length) * 100)
+    const correctCount = answers.filter((ans, i) => ans === content.questions[i].correct).length
+    return Math.round((correctCount / content.questions.length) * 100)
   }
 
   const saveResults = async () => {
@@ -113,17 +154,17 @@ export function PracticeView({ student, moduleName, moduleSlug }: Props) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f8f9fb] p-6">
         <Card className="w-full max-w-lg overflow-hidden border-0 shadow-2xl rounded-3xl">
-          <div className="h-32 bg-gradient-to-br from-emerald-600 to-teal-500 p-8 flex items-end justify-between">
+          <div className={`h-32 p-8 flex items-end justify-between ${isListening ? 'bg-gradient-to-br from-blue-600 to-indigo-500' : 'bg-gradient-to-br from-emerald-600 to-teal-500'}`}>
             <div className="text-white">
               <Badge className="bg-white/20 text-white border-0 mb-2">PRACTICE MODE</Badge>
               <h2 className="text-2xl font-black">{moduleName}</h2>
             </div>
-            <BookOpen className="h-16 w-16 text-white/20" />
+            {isListening ? <Clock className="h-16 w-16 text-white/20" /> : <BookOpen className="h-16 w-16 text-white/20" />}
           </div>
           <CardContent className="p-8">
             <div className="space-y-6">
               <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isListening ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
                   <Clock className="h-5 w-5" />
                 </div>
                 <div>
@@ -132,12 +173,12 @@ export function PracticeView({ student, moduleName, moduleSlug }: Props) {
                 </div>
               </div>
               <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
                   <Sparkles className="h-5 w-5" />
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-800">Skill Builder</h4>
-                  <p className="text-sm text-slate-500">This session will improve your Reading comprehension and logical deduction.</p>
+                  <p className="text-sm text-slate-500">This session will improve your {isListening ? 'Listening' : 'Reading'} comprehension and logical deduction.</p>
                 </div>
               </div>
               
@@ -159,41 +200,55 @@ export function PracticeView({ student, moduleName, moduleSlug }: Props) {
   }
 
   if (step === 'active') {
-    const q = MOCK_READING_CONTENT.questions[currentQuestion]
-    const progress = ((currentQuestion + 1) / MOCK_READING_CONTENT.questions.length) * 100
+    const q = content.questions[currentQuestion]
+    const progress = ((currentQuestion + 1) / content.questions.length) * 100
 
     return (
       <div className="min-h-screen bg-[#f8f9fb] p-6">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
-               <div className="h-10 w-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-emerald-600">
-                  <BookOpen className="h-5 w-5" />
+               <div className={`h-10 w-10 rounded-2xl bg-white shadow-sm flex items-center justify-center ${isListening ? 'text-blue-600' : 'text-emerald-600'}`}>
+                  {isListening ? <Clock className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
                </div>
                <div>
                  <h2 className="text-xl font-black text-slate-900">{moduleName} Practice</h2>
-                 <p className="text-xs text-slate-500">Question {currentQuestion + 1} of {MOCK_READING_CONTENT.questions.length}</p>
+                 <p className="text-xs text-slate-500">Question {currentQuestion + 1} of {content.questions.length}</p>
                </div>
             </div>
             <div className="w-48">
-              <Progress value={progress} className="h-2 bg-slate-200" />
+              <Progress value={progress} className={`h-2 ${isListening ? 'bg-blue-100' : 'bg-slate-200'}`} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* TEXT SIDE */}
-            <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
+            {/* CONTENT SIDE */}
+            <Card className="border-0 shadow-lg rounded-3xl overflow-hidden h-fit">
                <CardHeader className="bg-slate-50 border-b border-slate-100">
                  <CardTitle className="text-sm font-bold text-slate-500 flex items-center gap-2">
                    <AlertCircle className="h-4 w-4" />
-                   Reading Passage
+                   {isListening ? 'Listening Audio' : 'Reading Passage'}
                  </CardTitle>
                </CardHeader>
                <CardContent className="p-8">
-                  <h3 className="text-xl font-bold text-slate-900 mb-4">{MOCK_READING_CONTENT.title}</h3>
-                  <p className="text-slate-600 leading-relaxed italic border-l-4 border-emerald-500 pl-4 py-2 bg-emerald-50/30 rounded-r-xl">
-                    "{MOCK_READING_CONTENT.text}"
-                  </p>
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">{content.title}</h3>
+                  {isListening ? (
+                    <div className="flex flex-col items-center py-8">
+                       <Button 
+                         onClick={speak}
+                         disabled={isSpeaking}
+                         className={`h-24 w-24 rounded-full shadow-2xl transition-all ${isSpeaking ? 'bg-blue-100 text-blue-600 animate-pulse' : 'bg-blue-600 text-white hover:scale-105'}`}
+                       >
+                         {isSpeaking ? <RotateCcw className="h-10 w-10 animate-spin" /> : <Clock className="h-10 w-10" />}
+                       </Button>
+                       <p className="mt-4 text-sm font-bold text-slate-500">{isSpeaking ? 'Listening...' : 'Click to Play Audio'}</p>
+                       <p className="mt-2 text-center text-xs text-slate-400 italic">"Listen carefully to the seminar snippet and answer the questions."</p>
+                    </div>
+                  ) : (
+                    <p className="text-slate-600 leading-relaxed italic border-l-4 border-emerald-500 pl-4 py-2 bg-emerald-50/30 rounded-r-xl">
+                      "{content.text}"
+                    </p>
+                  )}
                </CardContent>
             </Card>
 

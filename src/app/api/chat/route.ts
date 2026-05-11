@@ -1,6 +1,6 @@
 // src/app/api/chat/route.ts
 // Streaming chat API with strict guardrails - Gemini Edition
-import { streamText } from 'ai'
+import { streamText, Message } from 'ai'
 import { google } from '@ai-sdk/google'
 import { HOOT_AI_SYSTEM_PROMPT, NPC_RESPONSE } from '@/lib/ai-prompts'
 
@@ -20,7 +20,7 @@ function isOffTopic(message: string): boolean {
 
 export async function POST(req: Request) {
     try {
-        const { messages, context }: { messages: any[]; context: string } = await req.json()
+        const { messages, context }: { messages: Message[]; context: string } = await req.json()
         const lastMessage = messages[messages.length - 1]?.content || ''
 
         // Guardrail: immediate NPC response for off-topic

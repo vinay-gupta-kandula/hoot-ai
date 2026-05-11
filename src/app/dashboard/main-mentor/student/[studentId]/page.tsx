@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { StudentDetailView } from './student-detail-view'
+import { AssessmentRow, StudentRow } from '@/types/types'
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params
@@ -10,14 +11,12 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   if (!user) redirect('/login')
 
-  const supabaseAdmin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-
   const [
     { data: student },
     { data: assessments },
   ] = await Promise.all([
     supabaseAdmin.from('students').select('*, mentor:mentors(id, name, email, pool_no)').eq('id', studentId).single(),
-    supabaseAdmin.from('assessments').select('*').eq('student_id', studentId),
+    supabaseAdmin.from('assessments').select('*').eq('student_id', studentId).returns<AssessmentRow[]>(),
   ])
 
   if (!student) return <div>Student not found.</div>
@@ -28,7 +27,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const courseMap: Record<string, { sum: number; count: number }> = {}
   const moduleMap: Record<string, { sum: number; count: number; course: string; duration: number; attempts: number; date: string }> = {}
 
-  assessmentsList.forEach((a: any) => {
+  assessmentsList.forEach((a) => {
     const acc = Number(a.accuracy)
     if (a.course_name) {
       if (!courseMap[a.course_name]) courseMap[a.course_name] = { sum: 0, count: 0 }
@@ -63,11 +62,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   })
 
   const totalAvgAcc = assessmentsList.length > 0
-    ? Math.round(assessmentsList.reduce((s: number, a: any) => s + Number(a.accuracy), 0) / assessmentsList.length * 10) / 10
+    ? Math.round(assessmentsList.reduce((s: number, a) => s + Number(a.accuracy), 0) / assessmentsList.length * 10) / 10
     : 0
 
-  const totalTime = assessmentsList.reduce((s: number, a: any) => s + Number(a.total_duration || 0), 0)
-  const totalAttempts = assessmentsList.reduce((s: number, a: any) => s + Number(a.attempt_count || 0), 0)
+  const totalTime = assessmentsList.reduce((s: number, a) => s + Number(a.total_duration || 0), 0)
+  const totalAttempts = assessmentsList.reduce((s: number, a) => s + Number(a.attempt_count || 0), 0)
 
   return (
     <StudentDetailView
