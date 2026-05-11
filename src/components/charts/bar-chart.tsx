@@ -71,7 +71,10 @@ export function AccuracyBarChart({
               fontSize: 12,
               fontFamily: "'DM Sans'",
             }}
-            formatter={(value: number) => [`${value.toFixed(1)}%`, "Accuracy"]}
+            formatter={(value: unknown) => [
+              typeof value === "number" ? `${value.toFixed(1)}%` : String(value),
+              "Accuracy",
+            ]}
           />
           <Bar
             dataKey="accuracy"
@@ -86,7 +89,9 @@ export function AccuracyBarChart({
               <LabelList
                 dataKey="accuracy"
                 position="right"
-                formatter={(v: number) => `${v.toFixed(1)}%`}
+                formatter={(v: unknown) =>
+                  typeof v === "number" ? `${v.toFixed(1)}%` : String(v)
+                }
                 style={{ fill: "#4a4270", fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans'" }}
               />
             )}
@@ -121,7 +126,10 @@ export function AccuracyBarChart({
             fontSize: 12,
             fontFamily: "'DM Sans'",
           }}
-          formatter={(value: number) => [`${value.toFixed(1)}%`, "Accuracy"]}
+          formatter={(value: unknown) => [
+            typeof value === "number" ? `${value.toFixed(1)}%` : String(value),
+            "Accuracy",
+          ]}
         />
         <Bar
           dataKey="accuracy"
@@ -136,7 +144,9 @@ export function AccuracyBarChart({
             <LabelList
               dataKey="accuracy"
               position="top"
-              formatter={(v: number) => `${v.toFixed(1)}%`}
+              formatter={(v: unknown) =>
+                typeof v === "number" ? `${v.toFixed(1)}%` : String(v)
+              }
               style={{ fill: "#4a4270", fontSize: 10, fontWeight: 600, fontFamily: "'DM Sans'" }}
             />
           )}

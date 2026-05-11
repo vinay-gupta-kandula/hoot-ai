@@ -2,20 +2,20 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
+import { ChatBot } from '@/components/ui/chat-bot'
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis,
+  Area, Cell, ScatterChart, Scatter, ZAxis,
   ComposedChart, Line, Treemap, Funnel, FunnelChart, LabelList,
 } from 'recharts'
 import {
   TrendingUp, TrendingDown, Target, Clock, RotateCcw, BookOpen,
-  Award, Hash, User, GraduationCap, ChevronRight, Zap, BarChart3,
+  Award, Zap, BarChart3,
   Activity, Layers, ArrowUpRight, ArrowDownRight, Sparkles, Flame,
-  ChevronDown, ChevronUp, LayoutDashboard, Calendar, Cpu,
+  ChevronDown, ChevronUp, Calendar, Cpu,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
 interface Student {
@@ -248,7 +248,7 @@ export function StudentDashboardView({ student, analytics }: Props) {
   const [expandedModule, setExpandedModule] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'modules' | 'progress'>('overview')
 
-  const topModule = analytics.moduleBreakdown[0]
+  // const topModule = analytics.moduleBreakdown[0]
   const improvement = analytics.sparklineData.length >= 2
     ? analytics.sparklineData[analytics.sparklineData.length - 1] - analytics.sparklineData[0]
     : 0
@@ -372,6 +372,7 @@ export function StudentDashboardView({ student, analytics }: Props) {
                   data={analytics.treemapData}
                   dataKey="size"
                   aspectRatio={4 / 3}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   content={(props: any) => {
                     const { x, y, width, height, name, score } = props;
                     return (
@@ -569,6 +570,33 @@ export function StudentDashboardView({ student, analytics }: Props) {
           </div>
         </ChartCard>
       </div>
+      <ChatBot
+        student={{
+          name: student.name,
+          rollNo: student.rollNo,
+          branch: student.branch,
+          college: student.college,
+          technology: student.technology,
+          gender: student.gender,
+          mentorName: student.mentorName,
+          poolNo: student.poolNo,
+        }}
+        analytics={{
+          totalAssessments: analytics.stats.totalAssessments,
+          avgAccuracy: analytics.stats.avgAccuracy,
+          totalDuration: analytics.stats.totalDuration,
+          totalAttempts: analytics.stats.totalAttempts,
+          myRank: analytics.stats.myRank,
+          totalPeers: analytics.stats.totalPeers,
+          classAvg: analytics.stats.classAvg,
+          bestCourse: analytics.stats.bestCourse,
+          bestScore: analytics.stats.bestScore,
+          worstCourse: analytics.stats.worstCourse,
+          worstScore: analytics.stats.worstScore,
+          courseAccuracy: analytics.courseAccuracy,
+          moduleBreakdown: analytics.moduleBreakdown,
+        }}
+      />
     </div>
   )
 }

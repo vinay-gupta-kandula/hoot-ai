@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   PieChart,
   Pie,
@@ -23,10 +22,18 @@ interface DistributionPieProps {
 }
 
 /* Custom active shape for hover effect */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function renderActiveShape(props: any) {
   const {
-    cx, cy, innerRadius, outerRadius, startAngle, endAngle,
-    fill, payload, percent, value,
+    cx,
+    cy,
+    innerRadius,
+    outerRadius,
+    startAngle,
+    endAngle,
+    fill,
+    payload,
+    value,
   } = props;
 
   return (
@@ -48,7 +55,7 @@ function renderActiveShape(props: any) {
         fill="#9892b8"
         style={{ fontSize: 11, fontWeight: 500, fontFamily: "'DM Sans'" }}
       >
-        {payload.name}
+        {payload?.name}
       </text>
       <Sector
         cx={cx}
@@ -72,15 +79,13 @@ function renderActiveShape(props: any) {
   );
 }
 
-export function DistributionPie({ data, height = 260, title }: DistributionPieProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
+export function DistributionPie({ data, height = 260 }: DistributionPieProps) {
 
   return (
     <div>
       <ResponsiveContainer width="100%" height={height}>
         <PieChart>
           <Pie
-            activeIndex={activeIndex}
             activeShape={renderActiveShape}
             data={data}
             cx="50%"
@@ -88,7 +93,6 @@ export function DistributionPie({ data, height = 260, title }: DistributionPiePr
             innerRadius={55}
             outerRadius={80}
             dataKey="value"
-            onMouseEnter={(_, index) => setActiveIndex(index)}
             animationDuration={600}
             animationEasing="ease-out"
           >
@@ -115,7 +119,6 @@ export function DistributionPie({ data, height = 260, title }: DistributionPiePr
           <div
             key={i}
             className="flex items-center gap-1.5 cursor-pointer"
-            onMouseEnter={() => setActiveIndex(i)}
           >
             <span
               className="w-2.5 h-2.5 rounded-full shrink-0"

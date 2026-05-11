@@ -60,7 +60,10 @@ export function TrendAreaChart({
             fontSize: 12,
             fontFamily: "'DM Sans'",
           }}
-          formatter={(value: number) => [`${value.toFixed(1)}`, label]}
+          formatter={(value: unknown) => [
+            typeof value === "number" ? value.toFixed(1) : String(value),
+            label,
+          ]}
         />
         <Area
           type="monotone"

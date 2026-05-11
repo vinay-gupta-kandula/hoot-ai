@@ -60,7 +60,10 @@ export function SkillRadar({ data, height = 300 }: SkillRadarProps) {
             fontSize: 12,
             fontFamily: "'DM Sans', sans-serif",
           }}
-          formatter={(value: number) => [`${value.toFixed(1)}%`, "Accuracy"]}
+          formatter={(value: unknown) => [
+            typeof value === "number" ? `${value.toFixed(1)}%` : String(value),
+            "Accuracy",
+          ]}
         />
         <defs>
           <linearGradient id="radarGradient" x1="0" y1="0" x2="0" y2="1">
