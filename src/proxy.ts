@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
@@ -43,11 +43,6 @@ export async function proxy(request: NextRequest) {
         url.pathname = '/login'
         return NextResponse.redirect(url)
     }
-
-    const supabaseAdmin = createAdminClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
 
     const [studentRes, mentorRes, mainMentorRes] = await Promise.all([
         supabaseAdmin.from('students').select('id').eq('email', email).single(),

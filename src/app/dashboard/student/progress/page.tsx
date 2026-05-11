@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { StudentProgressView } from './progress-view'
 import { AssessmentRow, StudentRow } from '@/types/types'
 
@@ -9,11 +9,6 @@ export default async function StudentProgressPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user?.email) redirect('/login')
-
-  const supabaseAdmin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
 
   const { data: studentData } = await supabaseAdmin
     .from('students')
