@@ -2,41 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { MentorDashboardView } from './mentor-view'
-
-interface AssessmentRow {
-  id: string
-  student_id: string | null
-  mentor_id: string | null
-  module_name: string | null
-  course_name: string | null
-  accuracy: number | null
-  total_duration: number | null
-  attempt_count: number | null
-  assessment_date: string | null
-  created_at: string
-}
-
-interface StudentRow {
-  id: string
-  name: string | null
-  roll_no: string | null
-  branch: string | null
-  college: string | null
-  technology: string | null
-  gender: string | null
-  mentor_id: string | null
-  created_at: string
-}
-
-interface MentorRow {
-  id: string
-  name: string | null
-  email: string | null
-  pool_no: number | null
-  main_mentor_id: string | null
-  created_at: string
-  students: StudentRow[] | null
-}
+import { AssessmentRow, StudentRow, MentorRow } from '@/types/types'
 
 export default async function MentorDashboardPage() {
   const supabase = await createClient()
@@ -72,7 +38,7 @@ export default async function MentorDashboardPage() {
   const mappedMentor = {
     id: mentorData.id,
     name: mentorData.name || 'Unknown Mentor',
-    department: 'Engineering',
+    department: 'LSRW Mentor', // More relevant placeholder than 'Engineering'
     email: mentorData.email || user.email,
     poolNo: mentorData.pool_no ?? undefined,
   }
@@ -110,7 +76,7 @@ export default async function MentorDashboardPage() {
       college: s.college || 'N/A',
       technology: s.technology || 'N/A',
       gender: (s.gender || 'UNKNOWN') as 'MALE' | 'FEMALE' | 'UNKNOWN',
-      year: '2nd Year',
+      year: 'Active', // More dynamic placeholder than '2nd Year'
       cgpa: acc && acc.count > 0 ? Math.round((acc.sum / acc.count) * 10) / 10 : 0,
     }
   })

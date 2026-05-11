@@ -139,7 +139,18 @@ export function StudentModulesView({ student, modules }: Props) {
           <>
             <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
               {/* Mini radar for selected module vs best possible */}
-              <ChartCard title="Module Radar" icon={<Activity className="h-4 w-4 text-emerald-600" />}>
+              <ChartCard 
+                title="Module Radar" 
+                icon={<Activity className="h-4 w-4 text-emerald-600" />}
+                footer={
+                  <Link href={`/dashboard/student/modules/practice/${selectedModule.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-2 h-11 text-sm font-bold shadow-lg shadow-emerald-200">
+                      <Sparkles className="h-4 w-4" />
+                      Launch Practice Session
+                    </Button>
+                  </Link>
+                }
+              >
                 <div className="h-[280px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <RadarChart data={[
@@ -259,16 +270,21 @@ export function StudentModulesView({ student, modules }: Props) {
   )
 }
 
-function ChartCard({ children, title, icon, className = '' }: { children: React.ReactNode; title: string; icon: React.ReactNode; className?: string }) {
+function ChartCard({ children, title, icon, footer, className = '' }: { children: React.ReactNode; title: string; icon: React.ReactNode; footer?: React.ReactNode; className?: string }) {
   return (
-    <Card className={`overflow-hidden border-slate-100 bg-white shadow-sm ${className}`}>
+    <Card className={`flex flex-col overflow-hidden border-slate-100 bg-white shadow-sm ${className}`}>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-800">
           {icon}
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className="flex-grow">{children}</CardContent>
+      {footer && (
+        <div className="border-t border-slate-50 bg-slate-50/30 p-4">
+          {footer}
+        </div>
+      )}
     </Card>
   )
 }

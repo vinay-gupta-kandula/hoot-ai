@@ -2,31 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { StudentModulesView } from './modules-view'
-
-interface AssessmentRow {
-  id: string
-  student_id: string | null
-  mentor_id: string | null
-  module_name: string | null
-  course_name: string | null
-  accuracy: number | null
-  total_duration: number | null
-  attempt_count: number | null
-  assessment_date: string | null
-  created_at: string
-}
-
-interface StudentRow {
-  id: string
-  name: string | null
-  roll_no: string | null
-  branch: string | null
-  college: string | null
-  technology: string | null
-  gender: string | null
-  mentor_id: string | null
-  created_at: string
-}
+import { AssessmentRow, StudentRow } from '@/types/types'
 
 export default async function StudentModulesPage() {
   const supabase = await createClient()

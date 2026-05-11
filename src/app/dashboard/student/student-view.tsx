@@ -11,7 +11,7 @@ import {
 } from 'recharts'
 import {
   TrendingUp, TrendingDown, Target, Clock, RotateCcw, BookOpen,
-  Award, Zap, BarChart3,
+  Award, Zap, BarChart3, Trophy,
   Activity, Layers, ArrowUpRight, ArrowDownRight, Sparkles, Flame,
   ChevronDown, ChevronUp, Calendar, Cpu,
 } from 'lucide-react'
@@ -277,8 +277,14 @@ export function StudentDashboardView({ student, analytics }: Props) {
               </button>
             </Link>
             <Link href="/dashboard/student/progress">
-              <button className="rounded-full px-4 py-1.5 text-xs font-semibold text-slate-500 transition-all hover:bg-slate-100">
+              <button className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${activeTab === 'progress' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200' : 'text-slate-500 hover:bg-slate-100'}`}>
                 Progress
+              </button>
+            </Link>
+            <Link href="/dashboard/student/leaderboard">
+              <button className="rounded-full px-4 py-1.5 text-xs font-semibold text-slate-500 transition-all hover:bg-slate-100 flex items-center gap-1.5">
+                <Trophy className="h-3 w-3 text-amber-500" />
+                Leaderboard
               </button>
             </Link>
             <div className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">

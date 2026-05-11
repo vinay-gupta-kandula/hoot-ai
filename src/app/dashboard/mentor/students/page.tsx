@@ -2,24 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { StudentsTableView } from './students-table-view'
-
-interface StudentRow {
-  id: string
-  name: string | null
-  roll_no: string | null
-  branch: string | null
-  college: string | null
-  technology: string | null
-  gender: string | null
-  mentor_id: string | null
-  created_at: string
-}
-
-interface MentorRow {
-  id: string
-  name: string | null
-  email: string | null
-}
+import { StudentRow, MentorRow } from '@/types/types'
 
 export default async function StudentsTablePage() {
   const supabase = await createClient()

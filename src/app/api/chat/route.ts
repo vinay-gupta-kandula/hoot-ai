@@ -4,10 +4,9 @@ import { streamText } from 'ai'
 import { google } from '@ai-sdk/google'
 import { HOOT_AI_SYSTEM_PROMPT, NPC_RESPONSE } from '@/lib/ai-prompts'
 
-// Off-topic keywords to catch early
+// Off-topic keywords to catch early (unrelated to academic performance)
 const OFF_TOPIC_PATTERNS = [
     /weather/i, /news/i, /politic/i, /election/i, /war/i,
-    /code/i, /program/i, /javascript/i, /python/i, /react/i,
     /joke/i, /funny/i, /poem/i, /story/i, /write.*essay/i,
     /recipe/i, /cook/i, /food/i, /movie/i, /song/i,
     /who.*president/i, /capital.*of/i, /population.*of/i,
